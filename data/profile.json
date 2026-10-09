@@ -1,0 +1,34 @@
+{
+  "login": "SabillonJ",
+  "display": ["JAFETH", "SABILLÓN"],
+  "fullName": "Josué Jafeth García Sabillón",
+  "role": "Full-stack developer",
+  "place": "Honduras · UTC−6",
+  "about": [
+    "I write the software a concrete and block plant runs on: cement purchasing, payroll inputs, gate passes, beam quotes, and a camera that counts blocks on the line.",
+    "React and TypeScript in front, C# and SQL Server behind, Python when a model has to look at something."
+  ],
+  "areas": {
+    "cement": "Cement, silos & purchasing",
+    "people": "People, shifts & time clocks",
+    "warehouse": "Warehouse, scale & payments",
+    "gate": "Gate passes & access",
+    "beams": "Quotes for precast beams",
+    "platform": "Platform: auth, tests, PWA",
+    "vision": "Machine vision on the block line",
+    "wall": "TV wall dashboards",
+    "assistant": "WhatsApp assistant, local LLM",
+    "other": "Everything else"
+  },
+  "stack": [
+    ["Front", ["React", "TypeScript", "Vite", "Tailwind", "shadcn/ui", "TanStack Query", "Recharts", "SignalR"]],
+    ["Back", ["ASP.NET Core 8", "Dapper", "EF Core", "SQL Server", "QuestPDF", "ClosedXML", "xUnit"]],
+    ["Plant", ["Python", "YOLO", "Ollama", "Docker", "IIS", "IP cameras", "biometric clocks"]]
+  ],
+  "method": [
+    ["Read the real system first.", "The ERP, the time clock, the spreadsheet being replaced: all of it, before any design."],
+    ["Small commits.", "A median of {medianFiles} files each, so a change can be read and undone."],
+    ["Tests before every commit.", "Nothing goes in while a test is red."],
+    ["Agents as teammates.", "Claude Code and Codex, with skills and hooks I write and measure."]
+  ]
+}

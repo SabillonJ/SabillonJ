@@ -1,0 +1,40 @@
+name: cards
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # 05:17 in Honduras
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "generator/**"
+      - "data/profile.json"
+      - "data/work.json"
+
+permissions:
+  contents: write
+
+concurrency: cards
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "fonttools==4.65.0"
+      - name: Read the contribution calendar
+        run: python generator/fetch_calendar.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Draw the cards
+        run: python generator/build.py
+      - name: Commit the new drawings
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cards README.md data/calendar.json
+          git diff --cached --quiet || git commit -m "chore(cards): refresh"
+          git push
