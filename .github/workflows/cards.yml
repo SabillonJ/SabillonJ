@@ -4,12 +4,9 @@ on:
   schedule:
     - cron: "17 11 * * *"   # 05:17 in Honduras
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "generator/**"
-      - "data/profile.json"
-      - "data/work.json"
+  # No push trigger. Editing the generator means the cards were just redrawn on this
+  # machine and pushed; a run that redraws them again only races the next commit, and
+  # it did, three times in one afternoon. The nightly run is what this is for.
 
 permissions:
   contents: write
