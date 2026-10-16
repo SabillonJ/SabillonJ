@@ -11,6 +11,7 @@ No card says how many commits sit in a private repository, or what they touched:
 cards show the systems, not someone else's git history.
 """
 import datetime
+import hashlib
 import html
 import json
 import sys
@@ -474,10 +475,15 @@ def card_method(theme, profile, work, calendar):
 ROWS = [[card_line], [card_id, card_about], [card_built, card_signal], [card_stack, card_method]]
 
 
-def picture(card, prefix):
+def picture(card, prefix, stamp):
+    """GitHub caches a README image by its address, so a redrawn card with the same file
+    name can sit there for hours. The content's own digest in the query string makes a
+    changed card a new address, and an unchanged one keep its cache."""
     alt = html.escape(card.alt, quote=True)
-    return (f'<picture><source media="(prefers-color-scheme: dark)" srcset="{prefix}{card.name}-dark.svg">'
-            f'<img src="{prefix}{card.name}-light.svg" width="{card.w}" alt="{alt}"></picture>')
+    return (f'<picture><source media="(prefers-color-scheme: dark)" '
+            f'srcset="{prefix}{card.name}-dark.svg?v={stamp["dark"]}">'
+            f'<img src="{prefix}{card.name}-light.svg?v={stamp["light"]}" '
+            f'width="{card.w}" alt="{alt}"></picture>')
 
 
 def main():
@@ -493,11 +499,14 @@ def main():
     for row in ROWS:
         pictures = []
         for draw in row:
+            stamp = {}
             for theme in THEMES:
                 card = draw(theme, profile, work, calendar)
-                (OUT / f"{card.name}-{theme}.svg").write_text(card.svg(), encoding="utf-8", newline="\n")
+                svg = card.svg()
+                stamp[theme] = hashlib.sha1(svg.encode("utf-8")).hexdigest()[:8]
+                (OUT / f"{card.name}-{theme}.svg").write_text(svg, encoding="utf-8", newline="\n")
                 preview[theme].append(f'<img src="cards/{card.name}-{theme}.svg" width="{card.w}" alt="">')
-            pictures.append(picture(card, raw))
+            pictures.append(picture(card, raw, stamp))
             print(f"{card.name:8} {card.h} px  {len(card.svg()) / 1024:.0f} KB")
         readme_rows.append("".join(pictures))    # no whitespace: the two halves must touch
         for theme in THEMES:
