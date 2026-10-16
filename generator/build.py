@@ -2,10 +2,13 @@
 
     python generator/build.py
 
-Reads data/profile.json (what I say), data/work.json (counts mined from private
-repositories with mine.py) and data/calendar.json (GitHub's contribution calendar).
-Every letter is an outline taken from Martian Mono, so a card looks the same on any
-machine and never waits for a font to load.
+Reads data/profile.json (what I say and what I have shipped), data/work.json (the
+language mix and median change size, from mine.py) and data/calendar.json (GitHub's
+contribution calendar). Every letter is an outline taken from Martian Mono, so a card
+looks the same on any machine and never waits for a font to load.
+
+No card says how many commits sit in a private repository, or what they touched: the
+cards show the systems, not someone else's git history.
 """
 import datetime
 import html
@@ -22,6 +25,7 @@ FONT = ROOT / "generator" / "fonts" / "MartianMono-VF.ttf"
 OUT = ROOT / "cards"
 
 W = 412          # one card; two sit side by side on a desktop and stack on a phone
+W_WIDE = 2 * W   # the banner: as wide as two cards, so it fills the README column
 PAD = 28
 INNER = W - 2 * PAD
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -53,6 +57,18 @@ def sweep_css(name, axis, travel, seconds):
     return (f"@keyframes {name}{{0%{{transform:translate{axis}(0);opacity:0}}8%{{opacity:.6}}"
             f"92%{{opacity:.6}}100%{{transform:translate{axis}({travel:.0f}px);opacity:0}}}}"
             f".{name}{{animation:{name} {seconds}s linear infinite}}")
+
+
+def drift_css(name, tile, seconds):
+    """A row of identical things sliding left by exactly one tile, so the loop has no seam."""
+    return (f"@keyframes {name}{{to{{transform:translateX(-{tile:.2f}px)}}}}"
+            f".{name}{{animation:{name} {seconds}s linear infinite}}")
+
+
+def hop_css(name, travel, stops, seconds):
+    """A marker that parks on one item at a time: every frame still shows a marked item."""
+    return (f"@keyframes {name}{{to{{transform:translateY({travel:.1f}px)}}}}"
+            f".{name}{{animation:{name} {seconds}s steps({stops}, jump-none) infinite}}")
 
 
 class Face:
@@ -114,9 +130,11 @@ def wrap_list(items, style, size, max_width=INNER, joiner=" · "):
 
 
 class Card:
-    def __init__(self, name, height, theme, alt):
+    def __init__(self, name, height, theme, alt, width=W):
         self.name, self.h, self.theme, self.t, self.alt = name, height, theme, THEMES[theme], alt
+        self.w = width
         self.defs, self.body, self.css = {}, [], ""
+        self.shapes = []    # clip paths and the like, written next to the glyph outlines
 
     def add(self, markup):
         self.body.append(markup)
@@ -153,21 +171,22 @@ class Card:
 
     def brackets(self, inset=12, arm=10):
         """Viewfinder corners: the frame of every card, joined in a row or stacked."""
-        for x, y, dx, dy in ((inset, inset, 1, 1), (W - inset, inset, -1, 1),
-                             (inset, self.h - inset, 1, -1), (W - inset, self.h - inset, -1, -1)):
+        for x, y, dx, dy in ((inset, inset, 1, 1), (self.w - inset, inset, -1, 1),
+                             (inset, self.h - inset, 1, -1), (self.w - inset, self.h - inset, -1, -1)):
             self.add(f'<path d="M{x + dx * arm} {y}H{x}V{y + dy * arm}" fill="none" '
                      f'stroke="{self.t["muted"]}" stroke-width="1.5"/>')
 
-    def hairline(self, y, x1=PAD, x2=W - PAD):
+    def hairline(self, y, x1=PAD, x2=None):
+        x2 = self.w - PAD if x2 is None else x2
         self.add(f'<path d="M{x1} {y}H{x2}" stroke="{self.t["hair"]}" stroke-width="1"/>')
 
     def svg(self):
         defs = "".join(f'<path id="{key}" d="{path}"/>' for key, path in sorted(self.defs.items()))
         alt = html.escape(self.alt, quote=True)
-        return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{self.h}" '
-                f'viewBox="0 0 {W} {self.h}" role="img" aria-label="{alt}"><title>{alt}</title>'
-                f'<style>{CSS}{self.css}</style><defs>{defs}</defs>'
-                f'<rect width="{W}" height="{self.h}" fill="{self.t["surface"]}"/>'
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{self.w}" height="{self.h}" '
+                f'viewBox="0 0 {self.w} {self.h}" role="img" aria-label="{alt}"><title>{alt}</title>'
+                f'<style>{CSS}{self.css}</style><defs>{defs}{"".join(self.shapes)}</defs>'
+                f'<rect width="{self.w}" height="{self.h}" fill="{self.t["surface"]}"/>'
                 f'{"".join(self.body)}</svg>\n')
 
 
@@ -187,6 +206,76 @@ def longest_streak(days):
 
 
 # ---- cards ---------------------------------------------------------------------------
+
+def block(x, y, w, h, body, hole):
+    """A two-hole concrete block, drawn from the front: what the plant actually makes."""
+    wall = 7
+    bore = (w - 3 * wall) / 2
+    holes = "".join(f'<rect x="{x + wall + i * (bore + wall):.2f}" y="{y + wall}" '
+                    f'width="{bore:.2f}" height="{h - 2 * wall}" rx="1" fill="{hole}"/>'
+                    for i in range(2))
+    return f'<rect x="{x:.2f}" y="{y}" width="{w}" height="{h}" rx="2" fill="{body}"/>{holes}'
+
+
+def card_line(theme, profile, work, calendar):
+    """The wide card on top: blocks riding the line past the camera that counts them."""
+    alt = (f'{profile["fullName"]} ({profile["login"]}), {profile["role"]}, {profile["place"]}. '
+           "Concrete blocks ride a conveyor past a camera that reads the line.")
+    c = Card("line", 232, theme, alt, width=W_WIDE)
+    c.brackets()
+    c.add(f'<circle class="blink" cx="{PAD + 4}" cy="44" r="4" fill="{c.t["accent"]}"/>')
+    c.text(PAD + 16, 48, profile["login"], "strong", 12, "ink")
+    c.text(c.w - PAD, 48, f'{profile["role"]} · {profile["place"]}', "label", 10.5, "muted",
+           anchor="end")
+
+    inner = c.w - 2 * PAD
+    name = " ".join(profile["display"])
+    size = min(inner / (len(name) * char_width("display", 1)), 46)
+    c.text(PAD, 128, name, "display", size, "ink")
+    c.hairline(150)
+    c.text(PAD, 168, "block line", "label", 10.5, "muted")
+
+    # The belt: one tile is a block plus the gap behind it, so sliding the row left by a
+    # tile and starting over is seamless. Blocks and rollers ride in the same group,
+    # which is why they never drift apart. Keep a tile wide enough that the camera frame
+    # never touches the blocks either side of the one it is reading.
+    tile, bw, bh, pitch = 92, 46, 28, 23
+    top, surface = 178, 206
+    cam = PAD + 6 * tile + bw / 2        # a block sits dead centre under the camera at t=0
+    c.shapes.append(f'<clipPath id="belt"><rect x="{PAD}" y="160" width="{inner}" height="60"/>'
+                    "</clipPath>")
+
+    riders = [block(PAD + k * tile, top, bw, bh, c.t["ink2"], c.t["surface"])
+              for k in range(int(inner / tile) + 2)]
+    rollers = "".join(f"M{PAD + i * pitch} {surface + 4}v5"
+                      for i in range(int((inner + tile) / pitch) + 1))
+    c.add(f'<g clip-path="url(#belt)"><g class="belt">{"".join(riders)}'
+          f'<path d="{rollers}" stroke="{c.t["faint"]}" stroke-width="1.5"/></g>'
+          f'<path d="M{PAD} {surface}H{c.w - PAD}" stroke="{c.t["ink2"]}" stroke-width="1.5"/></g>')
+
+    # The camera is bolted in place: the frame stays put and brightens as each block
+    # arrives under it. Dimmed, it is still a frame, so a frozen tab shows a whole card.
+    box, lift = bw + 18, 8
+    frame_h = surface + lift - (top - lift)
+    c.add(f'<g class="watch" stroke="{c.t["accent"]}" fill="none">'
+          f'<rect x="{cam - box / 2}" y="{top - lift}" width="{box}" height="{frame_h}" '
+          f'stroke-width="1" stroke-opacity=".35"/>'
+          + "".join(f'<path d="M{x + dx * 12} {y}H{x}V{y + dy * 12}" stroke-width="2"/>'
+                    for x, y, dx, dy in ((cam - box / 2, top - lift, 1, 1),
+                                         (cam + box / 2, top - lift, -1, 1),
+                                         (cam - box / 2, surface + lift, 1, -1),
+                                         (cam + box / 2, surface + lift, -1, -1)))
+          + f'<circle cx="{cam + box / 2}" cy="{top - lift}" r="2.5" '
+          f'fill="{c.t["accent"]}" stroke="none"/></g>')
+
+    c.css = (drift_css("belt", tile, 2.3)
+             + "@keyframes watch{0%,100%{opacity:1}38%,72%{opacity:.3}}"
+             + ".watch{animation:watch 2.3s ease-in-out infinite}"
+             + sweep_css("glint", "X", inner, 9))
+    c.add(f'<rect class="sweep glint" x="{PAD}" y="{128 - size:.1f}" width="1" '
+          f'height="{size * 1.15:.1f}" fill="{c.t["accent"]}"/>')
+    return c
+
 
 def card_id(theme, profile, work, calendar):
     alt = f'{profile["fullName"]} ({profile["login"]}). {profile["role"]}, {profile["place"]}.'
@@ -218,9 +307,12 @@ def card_id(theme, profile, work, calendar):
 
 
 def card_about(theme, profile, work, calendar):
+    # What the systems carry, not what my git log says: the repositories are the
+    # company's and private, so nothing here counts commits inside them.
+    scale = profile["scale"]
     rows = [
-        ("first commit", day_label(work["firstCommit"])),
-        ("commits", f'{work["commits"]} in {work["repos"]} private repos'),
+        ("in production", f'{scale["modules"]} modules'),
+        ("used by", f'{scale["users"]} people in {scale["roles"]} roles'),
         ("active days", f'{sum(1 for n in calendar["days"].values() if n)} this year'),
     ]
     alt = "About. " + " ".join(profile["about"]) + " " + ". ".join(f"{k}: {v}" for k, v in rows) + "."
@@ -229,7 +321,14 @@ def card_about(theme, profile, work, calendar):
     c.heading("About")
     y = 84
     for paragraph in profile["about"]:
-        y = c.lines(PAD, y, wrap(paragraph, "body", 12), "body", 12, "ink2", leading=1.58) + 7
+        lines = wrap(paragraph, "body", 12)
+        y = c.lines(PAD, y, lines, "body", 12, "ink2", leading=1.58)
+        baseline, tail = y - 12 * 1.58, lines[-1]
+        y += 7
+
+    # A cursor parked after the last word, blinking where I stopped typing.
+    c.add(f'<rect class="blink" x="{PAD + len(tail) * char_width("body", 12) + 3:.1f}" '
+          f'y="{baseline - 10:.1f}" width="2" height="12" fill="{c.t["accent"]}"/>')
 
     y = c.h - 28 - (len(rows) - 1) * 24
     for key, value in rows:
@@ -240,29 +339,25 @@ def card_about(theme, profile, work, calendar):
     return c
 
 
-def card_areas(theme, profile, work, calendar):
-    areas = sorted(((n, key) for key, n in work["areas"].items() if key != "other"), reverse=True)
-    if work["areas"].get("other"):
-        areas.append((work["areas"]["other"], "other"))
-    top = max(n for n, _ in areas)
-    as_of = datetime.date.fromisoformat(work["asOf"])
-    sub = (f'{work["commits"]} commits in private repositories, by area · '
-           f'{MONTHS[as_of.month - 1]} {as_of.year}')
-    alt = "Where the commits go. " + sub + ". " + ". ".join(
-        f'{profile["areas"][key]}: {n}' for n, key in areas) + "."
-    c = Card("areas", 372, theme, alt)
+def card_built(theme, profile, work, calendar):
+    """The systems instead of the commits: this is what the work produced."""
+    items = profile["built"]
+    sub = profile["builtSub"]
+    alt = "What I build. " + sub + ". " + " ".join(f"{t}: {d}." for t, d in items)
+    c = Card("built", 372, theme, alt)
     c.brackets()
-    c.heading("Where the commits go", sub)
-    y = 104
-    for i, (n, key) in enumerate(areas):
-        rest = key == "other"
-        c.text(PAD, y, profile["areas"][key], "body", 11.5, "muted" if rest else "ink2")
-        c.text(W - PAD, y, str(n), "strong", 11.5, "muted" if rest else "ink", anchor="end")
-        c.add(f'<rect x="{PAD}" y="{y + 6}" width="{INNER}" height="4" rx="2" fill="{c.t["track"]}"/>')
-        c.add(f'<rect x="{PAD}" y="{y + 6}" '
-              f'width="{max(INNER * n / top, 4):.1f}" height="4" rx="2" '
-              f'fill="{c.t["muted" if rest else "ink"]}"/>')
-        y += 26.5
+    c.heading("What I build", sub)
+    first, step = 118, 50
+    for i, (title, detail) in enumerate(items):
+        y = first + i * step
+        c.hairline(y - 18)
+        c.text(PAD, y, title, "strong", 11.5, "ink")
+        c.lines(PAD, y + 17, wrap(detail, "body", 11), "body", 11, "muted", leading=1.5)
+
+    # The accent bar walks down the list, one system every couple of seconds.
+    c.css = hop_css("pick", step * (len(items) - 1), len(items), 2.2 * len(items))
+    c.add(f'<rect class="pick" x="{PAD}" y="{first - 18.75}" width="34" height="1.5" '
+          f'fill="{c.t["accent"]}"/>')
     return c
 
 
@@ -345,6 +440,9 @@ def card_stack(theme, profile, work, calendar):
         c.add(f'<rect x="{x:.2f}" y="121" width="8" height="8" rx="2" fill="{c.t[tones[i]]}"/>')
         x += 13 + c.text(x + 13, 129, f"{name} {pct}%", "label", 10.5, "ink2") + 14
 
+    c.css = sweep_css("read", "X", INNER, 8)
+    c.add(f'<rect class="sweep read" x="{PAD}" y="94" width="1" height="16" fill="{c.t["accent"]}"/>')
+
     y = 166
     for group, items in profile["stack"]:
         c.text(PAD, y, group.upper(), "label", 10.5, "muted")
@@ -366,18 +464,20 @@ def card_method(theme, profile, work, calendar):
         c.text(PAD, y, lead, "strong", 12, "ink")
         y = c.lines(PAD, y + 19, wrap(detail, "body", 11.5), "body", 11.5, "muted", leading=1.55) + 14
     c.hairline(c.h - 46)
+    c.css = sweep_css("tick", "X", INNER, 13)
+    c.add(f'<rect class="sweep tick" x="{PAD}" y="{c.h - 49}" width="1" height="7" fill="{c.t["accent"]}"/>')
     c.text(PAD, c.h - 26, f'github.com/{profile["login"]}', "label", 10.5, "ink2")
     c.text(W - PAD, c.h - 26, f"updated {updated}", "label", 10.5, "muted", anchor="end")
     return c
 
 
-ROWS = [[card_id, card_about], [card_areas, card_signal], [card_stack, card_method]]
+ROWS = [[card_line], [card_id, card_about], [card_built, card_signal], [card_stack, card_method]]
 
 
-def picture(name, alt, prefix):
-    alt = html.escape(alt, quote=True)
-    return (f'<picture><source media="(prefers-color-scheme: dark)" srcset="{prefix}{name}-dark.svg">'
-            f'<img src="{prefix}{name}-light.svg" width="{W}" alt="{alt}"></picture>')
+def picture(card, prefix):
+    alt = html.escape(card.alt, quote=True)
+    return (f'<picture><source media="(prefers-color-scheme: dark)" srcset="{prefix}{card.name}-dark.svg">'
+            f'<img src="{prefix}{card.name}-light.svg" width="{card.w}" alt="{alt}"></picture>')
 
 
 def main():
@@ -396,8 +496,8 @@ def main():
             for theme in THEMES:
                 card = draw(theme, profile, work, calendar)
                 (OUT / f"{card.name}-{theme}.svg").write_text(card.svg(), encoding="utf-8", newline="\n")
-                preview[theme].append(f'<img src="cards/{card.name}-{theme}.svg" width="{W}" alt="">')
-            pictures.append(picture(card.name, card.alt, raw))
+                preview[theme].append(f'<img src="cards/{card.name}-{theme}.svg" width="{card.w}" alt="">')
+            pictures.append(picture(card, raw))
             print(f"{card.name:8} {card.h} px  {len(card.svg()) / 1024:.0f} KB")
         readme_rows.append("".join(pictures))    # no whitespace: the two halves must touch
         for theme in THEMES:
@@ -405,8 +505,8 @@ def main():
 
     note = ('<p align="center"><sub>Drawn by a small Python script in '
             f'<a href="https://github.com/{profile["login"]}/{profile["login"]}/tree/main/generator">'
-            "<code>/generator</code></a>. The numbers come from GitHub and from my own git history; "
-            "the code they count is private.</sub></p>")
+            "<code>/generator</code></a>. The numbers come from GitHub and from the systems "
+            "themselves.</sub></p>")
     readme = '<p align="center">\n' + "\n<br>\n".join(readme_rows) + "\n</p>\n\n" + note + "\n"
     (ROOT / "README.md").write_text(readme, encoding="utf-8", newline="\n")
 

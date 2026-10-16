@@ -8,18 +8,15 @@
     "I write the software a concrete and block plant runs on: cement purchasing, payroll inputs, gate passes, beam quotes, and a camera that counts blocks on the line.",
     "React and TypeScript in front, C# and SQL Server behind, Python when a model has to look at something."
   ],
-  "areas": {
-    "cement": "Cement, silos & purchasing",
-    "people": "People, shifts & time clocks",
-    "warehouse": "Warehouse, scale & payments",
-    "gate": "Gate passes & access",
-    "beams": "Quotes for precast beams",
-    "platform": "Platform: auth, tests, PWA",
-    "vision": "Machine vision on the block line",
-    "wall": "TV wall dashboards",
-    "assistant": "WhatsApp assistant, local LLM",
-    "other": "Everything else"
-  },
+  "scale": { "modules": 36, "users": 73, "roles": 27 },
+  "builtSub": "Running in production at a concrete and block plant",
+  "built": [
+    ["The plant ERP, front to back", "36 modules, 73 users, 27 roles, one codebase"],
+    ["A camera that counts blocks", "it watches the line and logs output per chamber"],
+    ["Time clocks into payroll", "shifts, sick leave, overtime and year-end pay"],
+    ["Quotes for precast beams", "priced, revised and approved in one screen"],
+    ["A WhatsApp assistant", "a local model answers from the plant data"]
+  ],
   "stack": [
     ["Front", ["React", "TypeScript", "Vite", "Tailwind", "shadcn/ui", "TanStack Query", "Recharts", "SignalR"]],
     ["Back", ["ASP.NET Core 8", "Dapper", "EF Core", "SQL Server", "QuestPDF", "ClosedXML", "xUnit"]],

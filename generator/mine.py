@@ -1,7 +1,9 @@
-"""Aggregate my commits in private repositories into data/work.json.
+"""Measure how I change code, from private clones, into data/work.json.
 
-Runs on my machine, where the private clones live. Only counts leave the repo:
-no code, no commit messages, no file names.
+Runs on my machine, where the private clones live. What it writes is a shape, not a
+history: which languages the files are in, and how big a single change tends to be.
+No commit count, no breakdown by subject, no commit messages, no file names — the
+repositories belong to the company, and data/work.json is public.
 
     python generator/mine.py --author SabillonJ --branch origin/Dev path/to/repo [more repos]
 """
@@ -9,26 +11,12 @@ import argparse
 import collections
 import datetime
 import json
-import re
 import statistics
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-
-# First match wins, so every commit lands in exactly one area and the bars add up.
-AREAS = [
-    ("vision", r"bloquera|block line|block production|block pallet|yolo|camera|nvr|waste|broken"),
-    ("assistant", r"whatsapp|chatbot|ollama|advisor|webhook|voice note"),
-    ("people", r"\bhr\b|rrhh|recursos humanos|employee|clock|biotime|sick|incapacit|shift|overtime|bonus|d[eé]cim|payroll|labor|naf\b"),
-    ("gate", r"access|\bpass(es)?\b|gate|visitor|porter|qr scanner|single-use scan|entry and exit"),
-    ("beams", r"beam|offer|viga|quote|tramo|span"),
-    ("cement", r"cement|cenosa|silo|freight|flete|factsap|cardex|contract|tonnage"),
-    ("wall", r"\btv\b|wall|4k|radio|music"),
-    ("warehouse", r"supplier|payment|exchange rate|warehouse|almacen|inventory|raw material|scale|bascula|boleta|dispatch|price change|invoice|purchase-orders|oc dashboard|fuel|tank"),
-    ("platform", r"test|guard|outage|theme|halloween|galax|login|auth|401|token|notification|maintenance|menu|module|pwa|service worker|health check|api is down|skill|agent|rules|traps|ticket"),
-]
 
 LANGUAGES = {".cs": "C#", ".tsx": "TypeScript", ".ts": "TypeScript", ".py": "Python", ".css": "CSS", ".sql": "SQL"}
 
@@ -47,39 +35,28 @@ def main():
     ap.add_argument("--branch", default="HEAD")
     args = ap.parse_args()
 
-    areas = collections.Counter()
     languages = collections.Counter()
     files_per_commit = []
-    dates = []
     for repo in args.repos:
-        log = git(repo, "log", args.branch, f"--author={args.author}", "--no-merges", "--name-only", "--format=@@%ad|%s", "--date=short")
+        log = git(repo, "log", args.branch, f"--author={args.author}", "--no-merges", "--name-only", "--format=@@")
         files = None
         for line in log.splitlines():
             if line.startswith("@@"):
                 if files is not None:
                     files_per_commit.append(files)
                 files = 0
-                date, subject = line[2:].split("|", 1)
-                dates.append(date)
-                area = next((key for key, pattern in AREAS if re.search(pattern, subject, re.I)), "other")
-                areas[area] += 1
             elif line.strip():
                 files += 1
                 languages[LANGUAGES.get(Path(line).suffix.lower(), "Other")] += 1
         if files is not None:
             files_per_commit.append(files)
 
-    if not dates:
+    if not files_per_commit:
         sys.exit("No commits found for that author and branch.")
 
     work = {
         "asOf": datetime.date.today().isoformat(),
-        "repos": len(args.repos),
-        "commits": len(dates),
-        "firstCommit": min(dates),
-        "lastCommit": max(dates),
         "medianFilesPerCommit": int(statistics.median(files_per_commit)),
-        "areas": dict(areas.most_common()),
         "languages": dict(languages.most_common()),
     }
     target = ROOT / "data" / "work.json"

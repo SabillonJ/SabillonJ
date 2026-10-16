@@ -1,22 +1,6 @@
 {
-  "asOf": "2026-10-10",
-  "repos": 2,
-  "commits": 342,
-  "firstCommit": "2026-08-01",
-  "lastCommit": "2026-10-07",
+  "asOf": "2026-10-16",
   "medianFilesPerCommit": 2,
-  "areas": {
-    "cement": 83,
-    "people": 48,
-    "warehouse": 47,
-    "gate": 32,
-    "beams": 30,
-    "platform": 29,
-    "vision": 24,
-    "other": 23,
-    "wall": 15,
-    "assistant": 11
-  },
   "languages": {
     "C#": 472,
     "TypeScript": 462,
