@@ -3,18 +3,17 @@
   "display": ["JAFETH", "SABILLÓN"],
   "fullName": "Josué Jafeth García Sabillón",
   "role": "Full-stack developer",
-  "place": "Honduras · UTC−6",
+  "place": "Honduras, UTC−6",
   "about": [
     "I build the software heavy industry runs on: the screens a plant floor works with, the services behind them, and the models that watch a line.",
     "React and TypeScript in front, C# and SQL Server behind, Python when something has to be seen."
   ],
   "aboutFoot": "What I make belongs to the companies it runs in. What I can show is how it is built.",
-  "builtSub": "The kind of work, and what it is made with",
   "built": [
-    ["Machines into screens", "Cameras, scales and clocks, read in place.", "PYTHON · YOLO · RTSP"],
-    ["Real time, not refresh", "Alerts reach the phone the moment they happen.", "SIGNALR · WEB PUSH · PWA"],
-    ["Reports nobody types", "Excel and PDF that build themselves.", "CLOSEDXML · QUESTPDF · EPPLUS"],
-    ["Models that run on site", "A local model on hardware already in the room.", "OLLAMA · DOCKER"]
+    ["Machines into screens", "Cameras, scales and clocks, read in place.", "Python, YOLO, RTSP"],
+    ["Real time, not refresh", "Alerts reach the phone the moment they happen.", "SignalR, Web Push, PWA"],
+    ["Reports nobody types", "Excel and PDF that build themselves.", "ClosedXML, QuestPDF, EPPlus"],
+    ["Models that run on site", "A local model on hardware already in the room.", "Ollama, Docker"]
   ],
   "stack": [
     ["Front", ["React", "TypeScript", "Vite", "Tailwind", "shadcn/ui", "TanStack Query", "Recharts", "SignalR"]],

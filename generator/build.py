@@ -31,8 +31,12 @@ PAD = 28
 INNER = W - 2 * PAD
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-# name: (weight, width) on the variable font's two axes
-STYLES = {"body": (400, 87.5), "strong": (700, 87.5), "label": (500, 75), "display": (800, 112.5)}
+# name: (weight, width) on the variable font's two axes. One family, but the axes are the
+# type system: the name runs wide and heavy, section titles and figures run heavy and
+# narrow against it, and the reading sizes sit in the middle. That width contrast is what
+# gives a page of one monospaced face a hierarchy at all.
+STYLES = {"body": (400, 87.5), "strong": (700, 87.5), "label": (500, 75),
+          "plate": (800, 75), "display": (800, 112.5)}
 
 # Black is neutral black, never navy. One accent, and it never carries data.
 THEMES = {
@@ -166,14 +170,19 @@ class Card:
         return y
 
     def heading(self, title, sub=None):
-        self.text(PAD, 52, title, "strong", 14, "ink")
+        """Big enough to be read before the body is. A card with a 14 px title and a 12 px
+        paragraph has no hierarchy at all — everything arrives at once."""
+        self.text(PAD, 64, title, "plate", 26, "ink")
         if sub:
-            self.lines(PAD, 72, wrap(sub, "label", 10.5), "label", 10.5, "muted", leading=1.45)
+            self.lines(PAD, 84, wrap(sub, "label", 10.5), "label", 10.5, "muted", leading=1.45)
 
-    def brackets(self, inset=12, arm=10):
-        """Viewfinder corners: the frame of every card, joined in a row or stacked."""
-        for x, y, dx, dy in ((inset, inset, 1, 1), (self.w - inset, inset, -1, 1),
-                             (inset, self.h - inset, 1, -1), (self.w - inset, self.h - inset, -1, -1)):
+    def brackets(self, inset=12, arm=10, corners=2):
+        """Viewfinder corners. Two opposite ones mark the card's reach without boxing it
+        in; four of them, six cards over, stopped being a signature and became noise.
+        The banner keeps all four, because that one is the instrument."""
+        places = ((inset, inset, 1, 1), (self.w - inset, self.h - inset, -1, -1),
+                  (self.w - inset, inset, -1, 1), (inset, self.h - inset, 1, -1))
+        for x, y, dx, dy in places[:corners]:
             self.add(f'<path d="M{x + dx * arm} {y}H{x}V{y + dy * arm}" fill="none" '
                      f'stroke="{self.t["muted"]}" stroke-width="1.5"/>')
 
@@ -223,16 +232,19 @@ def card_line(theme, profile, work, calendar):
     alt = (f'{profile["fullName"]} ({profile["login"]}), {profile["role"]}, {profile["place"]}. '
            "Concrete blocks ride a conveyor past a camera that reads the line.")
     c = Card("line", 232, theme, alt, width=W_WIDE)
-    c.brackets()
+    c.brackets(corners=4)
     c.add(f'<circle class="blink" cx="{PAD + 4}" cy="44" r="4" fill="{c.t["accent"]}"/>')
     c.text(PAD + 16, 48, profile["login"], "strong", 12, "ink")
-    c.text(c.w - PAD, 48, f'{profile["role"]} · {profile["place"]}', "label", 10.5, "muted",
-           anchor="end")
+    c.text(c.w - PAD, 48, profile["role"], "label", 10.5, "muted", anchor="end")
 
     inner = c.w - 2 * PAD
     name = " ".join(profile["display"])
     size = min(inner / (len(name) * char_width("display", 1)), 46)
     c.text(PAD, 128, name, "display", size, "ink")
+    # The full name sits in the space the display name leaves, set against it rather than
+    # under it: one plate, read in two passes.
+    c.text(c.w - PAD, 112, profile["fullName"], "label", 10.5, "ink2", anchor="end")
+    c.text(c.w - PAD, 128, profile["place"], "label", 10.5, "muted", anchor="end")
     c.hairline(150)
     c.text(PAD, 168, "block line", "label", 10.5, "muted")
 
@@ -278,68 +290,38 @@ def card_line(theme, profile, work, calendar):
     return c
 
 
-def card_id(theme, profile, work, calendar):
-    alt = f'{profile["fullName"]} ({profile["login"]}). {profile["role"]}, {profile["place"]}.'
-    c = Card("id", 328, theme, alt)
-    c.brackets()
-    c.add(f'<circle class="blink" cx="{PAD + 4}" cy="48" r="4" fill="{c.t["accent"]}"/>')
-    c.text(PAD + 16, 52, profile["login"], "strong", 12, "ink")
-    c.text(W - PAD, 52, profile["place"], "label", 10.5, "muted", anchor="end")
-
-    longest = max(len(line) for line in profile["display"])
-    size = min(INNER / (longest * FACES["display"].advance / 1000), 62)
-    y = 150
-    for line in profile["display"]:
-        c.text(PAD, y, line, "display", size, "ink")
-        y += size * 1.2
-
-    # A ruler under the name: one tick every 8 px, a taller one every fifth.
-    ruler = y - size * 1.2 + 26
-    ticks = "".join(f"M{PAD + i * 8} {ruler}v{-7 if i % 5 == 0 else -3}" for i in range(INNER // 8 + 1))
-    c.add(f'<path d="M{PAD} {ruler}H{W - PAD}{ticks}" fill="none" stroke="{c.t["faint"]}" stroke-width="1"/>')
-
-    top = 150 - size
-    c.css = sweep_css("scan", "Y", ruler - top, 7)
-    c.add(f'<rect class="sweep scan" x="{PAD}" y="{top:.1f}" width="{INNER}" height="1" fill="{c.t["accent"]}"/>')
-
-    c.text(PAD, ruler + 28, profile["role"], "body", 13, "ink2")
-    c.text(PAD, ruler + 48, profile["fullName"], "label", 10.5, "muted")
-    return c
-
-
 def card_about(theme, profile, work, calendar):
     # Nothing here describes an employer's system: not how many modules it has, not who
     # uses it, not which processes it covers. That inventory is theirs, and this is public.
+    # No "About" label either: the text is in the first person and says so itself.
     alt = "About. " + " ".join(profile["about"]) + " " + profile["aboutFoot"]
-    c = Card("about", 328, theme, alt)
+    c = Card("about", 180, theme, alt, width=W_WIDE)
     c.brackets()
-    c.heading("About")
-    y = 84
-    for paragraph in profile["about"]:
-        lines = wrap(paragraph, "body", 12)
-        y = c.lines(PAD, y, lines, "body", 12, "ink2", leading=1.58)
-        baseline, tail = y - 12 * 1.58, lines[-1]
-        y += 7
 
-    # A cursor parked after the last word, blinking where I stopped typing.
-    c.add(f'<rect class="blink" x="{PAD + len(tail) * char_width("body", 12) + 3:.1f}" '
-          f'y="{baseline - 10:.1f}" width="2" height="12" fill="{c.t["accent"]}"/>')
+    gutter = 24
+    column = (c.w - 2 * PAD - gutter) / 2
+    for i, paragraph in enumerate(profile["about"]):
+        x = PAD + i * (column + gutter)
+        lines = wrap(paragraph, "body", 12.5, column)
+        c.lines(x, 56, lines, "body", 12.5, "ink2", leading=1.6)
+        if i:   # a cursor parked after the last word, blinking where I stopped typing
+            tail = x + len(lines[-1]) * char_width("body", 12.5) + 3
+            c.add(f'<rect class="blink" x="{tail:.1f}" y="{56 + (len(lines) - 1) * 20 - 10:.1f}" '
+                  f'width="2" height="12" fill="{c.t["accent"]}"/>')
 
-    foot = wrap(profile["aboutFoot"], "body", 11.5)
-    c.hairline(c.h - 34 - len(foot) * 18)
-    c.lines(PAD, c.h - 34 - (len(foot) - 1) * 18, foot, "body", 11.5, "muted", leading=1.57)
+    c.hairline(c.h - 46)
+    c.text(PAD, c.h - 26, profile["aboutFoot"], "body", 11.5, "muted")
     return c
 
 
 def card_built(theme, profile, work, calendar):
     """What I can do and what it is made with — never whose system it was done in."""
     items = profile["built"]
-    sub = profile["builtSub"]
-    alt = "What I build. " + sub + ". " + " ".join(f"{t}: {d} {w}." for t, d, w in items)
+    alt = "What I build. " + " ".join(f"{t}: {d} {w}." for t, d, w in items)
     c = Card("built", 372, theme, alt)
     c.brackets()
-    c.heading("What I build", sub)
-    first, step = 118, 64
+    c.heading("What I build")
+    first, step = 104, 64
     for i, (title, detail, tools) in enumerate(items):
         y = first + i * step
         c.hairline(y - 18)
@@ -370,9 +352,9 @@ def card_signal(theme, profile, work, calendar):
            f"{end.year}, {active} active days, longest streak {streak} days.")
     c = Card("signal", 372, theme, alt)
     c.brackets()
-    c.heading("Daily output", "Contributions per day, last 10 weeks")
+    c.heading("Daily output")
 
-    base, tall, step, bar = 236, 112, INNER / span, 3
+    base, tall, step, bar = 232, 118, INNER / span, 3
     c.hairline(base + 0.5)
     for i, n in enumerate(counts):
         if not n:
@@ -389,7 +371,7 @@ def card_signal(theme, profile, work, calendar):
 
     # Only the peak wears a number; the rest is read against it.
     px = PAD + peak_at * step + step / 2
-    label = f"{counts[peak_at]} · {window[peak_at].day} {MONTHS[window[peak_at].month - 1]}"
+    label = f"{counts[peak_at]} on {window[peak_at].day} {MONTHS[window[peak_at].month - 1]}"
     c.text(px + 8, base - tall + 9, label, "label", 10.5, "ink2")
 
     for i, d in enumerate(window):
@@ -398,13 +380,14 @@ def card_signal(theme, profile, work, calendar):
             c.add(f'<path d="M{x:.2f} {base + 1}v5" stroke="{c.t["faint"]}" stroke-width="1"/>')
             c.text(x + 4, base + 17, MONTHS[d.month - 1], "label", 10.5, "muted")
 
-    stats = [(str(year_total), ["contributions", f"in {end.year}"]),
+    # The figures are the point of the card, so they are the size of the point.
+    stats = [(f"{year_total:,}", ["contributions", f"in {end.year}"]),
              (str(active), ["active days"]),
-             (str(streak), ["days, longest", "streak"])]
+             (str(streak), ["day streak,", "the longest yet"])]
     for i, (number, caption) in enumerate(stats):
         x = PAD + i * (INNER / 3)
-        c.text(x, 300, number, "strong", 24, "ink")
-        c.lines(x, 320, caption, "label", 10.5, "muted", leading=1.4)
+        c.text(x, 316, number, "plate", 42, "ink")
+        c.lines(x, 334, caption, "label", 10.5, "muted", leading=1.4)
     return c
 
 
@@ -418,7 +401,7 @@ def card_stack(theme, profile, work, calendar):
            + " ".join(f"{group}: {', '.join(items)}." for group, items in profile["stack"]))
     c = Card("stack", 372, theme, alt)
     c.brackets()
-    c.heading("Stack", "Files touched by language, then what I reach for")
+    c.heading("Stack")
 
     tones = ["ink", "muted", "faint"]   # every segment is also named below: identity is never tone alone
     x, gap = PAD, 2
@@ -452,7 +435,7 @@ def card_method(theme, profile, work, calendar):
     c = Card("method", 372, theme, alt)
     c.brackets()
     c.heading("How I work")
-    y = 88
+    y = 104
     for lead, detail in items:
         c.text(PAD, y, lead, "strong", 12, "ink")
         y = c.lines(PAD, y + 19, wrap(detail, "body", 11.5), "body", 11.5, "muted", leading=1.55) + 14
@@ -464,7 +447,7 @@ def card_method(theme, profile, work, calendar):
     return c
 
 
-ROWS = [[card_line], [card_id, card_about], [card_built, card_signal], [card_stack, card_method]]
+ROWS = [[card_line], [card_about], [card_built, card_signal], [card_stack, card_method]]
 
 
 def picture(card, prefix, stamp):

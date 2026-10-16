@@ -5,7 +5,7 @@ letters are outlines taken from Martian Mono.
 
 | File | What it does |
 |---|---|
-| `build.py` | Draws the fourteen cards in `cards/` (seven, light and dark) and writes `README.md`. |
+| `build.py` | Draws the twelve cards in `cards/` (six, light and dark) and writes `README.md`. |
 | `fetch_calendar.py` | Reads my contribution calendar from GitHub into `data/calendar.json`. |
 | `mine.py` | Measures language mix and median change size in private clones into `data/work.json`. Runs on my machine only. |
 | `fonts/` | Martian Mono, under the SIL Open Font License. |
