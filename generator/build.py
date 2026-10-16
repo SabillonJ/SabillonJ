@@ -308,15 +308,9 @@ def card_id(theme, profile, work, calendar):
 
 
 def card_about(theme, profile, work, calendar):
-    # What the systems carry, not what my git log says: the repositories are the
-    # company's and private, so nothing here counts commits inside them.
-    scale = profile["scale"]
-    rows = [
-        ("in production", f'{scale["modules"]} modules'),
-        ("used by", f'{scale["users"]} people in {scale["roles"]} roles'),
-        ("active days", f'{sum(1 for n in calendar["days"].values() if n)} this year'),
-    ]
-    alt = "About. " + " ".join(profile["about"]) + " " + ". ".join(f"{k}: {v}" for k, v in rows) + "."
+    # Nothing here describes an employer's system: not how many modules it has, not who
+    # uses it, not which processes it covers. That inventory is theirs, and this is public.
+    alt = "About. " + " ".join(profile["about"]) + " " + profile["aboutFoot"]
     c = Card("about", 328, theme, alt)
     c.brackets()
     c.heading("About")
@@ -331,29 +325,27 @@ def card_about(theme, profile, work, calendar):
     c.add(f'<rect class="blink" x="{PAD + len(tail) * char_width("body", 12) + 3:.1f}" '
           f'y="{baseline - 10:.1f}" width="2" height="12" fill="{c.t["accent"]}"/>')
 
-    y = c.h - 28 - (len(rows) - 1) * 24
-    for key, value in rows:
-        c.hairline(y - 16)
-        c.text(PAD, y, key, "label", 10.5, "muted")
-        c.text(PAD + 104, y, value, "body", 12, "ink")
-        y += 24
+    foot = wrap(profile["aboutFoot"], "body", 11.5)
+    c.hairline(c.h - 34 - len(foot) * 18)
+    c.lines(PAD, c.h - 34 - (len(foot) - 1) * 18, foot, "body", 11.5, "muted", leading=1.57)
     return c
 
 
 def card_built(theme, profile, work, calendar):
-    """The systems instead of the commits: this is what the work produced."""
+    """What I can do and what it is made with — never whose system it was done in."""
     items = profile["built"]
     sub = profile["builtSub"]
-    alt = "What I build. " + sub + ". " + " ".join(f"{t}: {d}." for t, d in items)
+    alt = "What I build. " + sub + ". " + " ".join(f"{t}: {d} {w}." for t, d, w in items)
     c = Card("built", 372, theme, alt)
     c.brackets()
     c.heading("What I build", sub)
-    first, step = 118, 50
-    for i, (title, detail) in enumerate(items):
+    first, step = 118, 64
+    for i, (title, detail, tools) in enumerate(items):
         y = first + i * step
         c.hairline(y - 18)
         c.text(PAD, y, title, "strong", 11.5, "ink")
         c.lines(PAD, y + 17, wrap(detail, "body", 11), "body", 11, "muted", leading=1.5)
+        c.text(PAD, y + 34, tools, "label", 9.5, "faint")
 
     # The accent bar walks down the list, one system every couple of seconds.
     c.css = hop_css("pick", step * (len(items) - 1), len(items), 2.2 * len(items))

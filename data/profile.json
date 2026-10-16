@@ -5,17 +5,16 @@
   "role": "Full-stack developer",
   "place": "Honduras · UTC−6",
   "about": [
-    "I write the software a concrete and block plant runs on: cement purchasing, payroll inputs, gate passes, beam quotes, and a camera that counts blocks on the line.",
-    "React and TypeScript in front, C# and SQL Server behind, Python when a model has to look at something."
+    "I build the software heavy industry runs on: the screens a plant floor works with, the services behind them, and the models that watch a line.",
+    "React and TypeScript in front, C# and SQL Server behind, Python when something has to be seen."
   ],
-  "scale": { "modules": 36, "users": 73, "roles": 27 },
-  "builtSub": "Running in production at a concrete and block plant",
+  "aboutFoot": "What I make belongs to the companies it runs in. What I can show is how it is built.",
+  "builtSub": "The kind of work, and what it is made with",
   "built": [
-    ["The plant ERP, front to back", "36 modules, 73 users, 27 roles, one codebase"],
-    ["A camera that counts blocks", "it watches the line and logs output per chamber"],
-    ["Time clocks into payroll", "shifts, sick leave, overtime and year-end pay"],
-    ["Quotes for precast beams", "priced, revised and approved in one screen"],
-    ["A WhatsApp assistant", "a local model answers from the plant data"]
+    ["Machines into screens", "Cameras, scales and clocks, read in place.", "PYTHON · YOLO · RTSP"],
+    ["Real time, not refresh", "Alerts reach the phone the moment they happen.", "SIGNALR · WEB PUSH · PWA"],
+    ["Reports nobody types", "Excel and PDF that build themselves.", "CLOSEDXML · QUESTPDF · EPPLUS"],
+    ["Models that run on site", "A local model on hardware already in the room.", "OLLAMA · DOCKER"]
   ],
   "stack": [
     ["Front", ["React", "TypeScript", "Vite", "Tailwind", "shadcn/ui", "TanStack Query", "Recharts", "SignalR"]],
